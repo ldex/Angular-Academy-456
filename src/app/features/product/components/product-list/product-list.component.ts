@@ -24,8 +24,8 @@ export class ProductListComponent {
   @Output() addToCart = new EventEmitter<number>();
   @Output() refresh = new EventEmitter<void>();
 
-  searchQuery = '';
   selectedCategory = '';
+  searchQuery = '';
   sortBy = 'name';
 
   private _products: Product[] = [];
