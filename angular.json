@@ -46,16 +46,6 @@
             }
           },
           "defaultConfiguration": "development"
-        },
-        "test": {
-          "builder": "@angular/build:karma",
-          "options": {
-            "tsConfig": "tsconfig.spec.json",
-            "karmaConfig": "karma.conf.js",
-            "assets": [],
-            "styles": ["src/global_styles.css"],
-            "scripts": []
-          }
         }
       },
       "prefix": "app",
