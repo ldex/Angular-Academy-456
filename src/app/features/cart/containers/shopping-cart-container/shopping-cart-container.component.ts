@@ -1,22 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { combineLatest, map } from 'rxjs';
 import { ShoppingCartComponent } from '../../components/shopping-cart/shopping-cart.component';
 import { CartService } from '../../../../services/cart.service';
-import { ProductService } from '../../../../services/product.service';
-import { CartItem } from '../../../../models/cart-item.model';
-import { Product } from '../../../../models/product.model';
-
-interface CartItemWithProduct extends CartItem {
-  productDetails: Product;
-}
+import { ProductStore } from '../../../product/product.store';
 
 @Component({
   selector: 'app-shopping-cart-container',
   imports: [CommonModule, ShoppingCartComponent],
   template: `
     <app-shopping-cart
-      [items]="(cartItems$ | async) || []"
+      [items]="cartItemsWithProducts()"
       (updateQuantity)="onUpdateQuantity($event)"
       (removeItem)="onRemoveItem($event)"
       (clearCart)="onClearCart()">
@@ -25,19 +18,18 @@ interface CartItemWithProduct extends CartItem {
 })
 export class ShoppingCartContainerComponent {
   private cartService = inject(CartService);
-  private productService = inject(ProductService);
+  private store = inject(ProductStore);
 
-  cartItems$ = combineLatest([
-    this.cartService.getCartItems(),
-    this.productService.getProducts()
-  ]).pipe(
-    map(([cartItems, products]): CartItemWithProduct[] => {
-      return cartItems.map(item => ({
-        ...item,
-        productDetails: products.find(p => p.id === item.product)!
-      }));
-    })
-  );
+  private cartItems = this.cartService.getCartItems();
+  private products = this.store.products;
+
+  cartItemsWithProducts = computed(() => {
+    return this.cartItems().map(item => ({
+      ...item,
+      productDetails: this.products().find(p => p.id === item.product)!
+    }));
+  });
+
 
   onUpdateQuantity(event: { productId: number; quantity: number }): void {
     this.cartService.updateQuantity(event.productId, event.quantity);

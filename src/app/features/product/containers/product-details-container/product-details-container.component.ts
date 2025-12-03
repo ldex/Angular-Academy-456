@@ -1,53 +1,42 @@
-import { Component, Input, numberAttribute, inject } from '@angular/core';
+import { Component, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { catchError, EMPTY, finalize, Observable } from 'rxjs';
 import { ProductDetailsComponent } from '../../components/product-details/product-details.component';
-import { ProductService } from '../../../../services/product.service';
 import { CartService } from '../../../../services/cart.service';
 import { AuthService } from '../../../../services/auth.service';
-import { Product } from '../../../../models/product.model';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ProductStore } from '../../product.store';
 
 @Component({
   selector: 'app-product-details-container',
   imports: [CommonModule, ProductDetailsComponent],
   template: `
     <app-product-details
-      [product]="product$ | async"
-      [error]="error"
-      [loading]="loading"
-      [isAuthenticated]="(authState$ | async)?.isAuthenticated || false"
+      [product]="product()"
+      [error]="error()"
+      [loading]="loading()"
+      [isAuthenticated]="isAuthenticated()"
       (addToCart)="onAddToCart($event)"
       (delete)="onDelete($event)">
     </app-product-details>
   `
 })
 export class ProductDetailsContainerComponent {
-  private router = inject(Router);
-  private productService = inject(ProductService);
+  private store = inject(ProductStore);
   private cartService = inject(CartService);
   private authService = inject(AuthService);
 
-  product$!: Observable<Product>;
-  error: string | null = null;
-  loading: boolean = false;
+  product = this.store.selectedProduct;
+  error = this.store.error;
+  loading = this.store.loading;
 
-  authState$ = this.authService.getAuthState();
+  private authState = toSignal(this.authService.getAuthState());
+  protected isAuthenticated = computed(() => this.authState()?.isAuthenticated ?? false);
 
-  @Input({ transform: numberAttribute })
-  set id(productId: number)
-  {
-    this.loading = true;
-    this.product$ = this
-      .productService
-      .getProduct(productId)
-      .pipe(
-        catchError(error => {
-          this.error = error.message || "Failed to load product";
-          return EMPTY;
-        }),
-        finalize(() => this.loading = false)
-      )
+  id = input.required<number>()
+
+  ngOnInit() {
+     this.store.clearSelectedProduct()
+     this.store.loadProduct(this.id())
   }
 
   onAddToCart(productId: number): void {
@@ -55,13 +44,6 @@ export class ProductDetailsContainerComponent {
   }
 
   onDelete(productId: number): void {
-      this.productService.deleteProduct(productId).subscribe({
-        next: () => {
-          this.router.navigate(['/products']);
-        },
-        error: (error) => {
-          console.error('Error deleting product:', error);
-        }
-      });
+      this.store.deleteProduct(productId)
   }
 }
